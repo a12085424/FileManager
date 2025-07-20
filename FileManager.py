@@ -5,7 +5,7 @@ import pandas as pd
 from PyQt5.QtWidgets import (
     QApplication, QWidget, QLabel, QLineEdit, QPushButton, QFileDialog,
     QComboBox, QSpinBox, QRadioButton, QGroupBox, QVBoxLayout, QHBoxLayout,
-    QFormLayout, QMessageBox, QTabWidget, QCheckBox, QDateEdit
+    QFormLayout, QMessageBox, QTabWidget, QCheckBox, QDateEdit, QSpacerItem, QSizePolicy
 )
 from PyQt5.QtCore import Qt, QDate
 from PyQt5.QtGui import QFont
@@ -35,7 +35,7 @@ class BatchFileGenerator(QWidget):
         super().__init__()
         self.setWindowTitle("批量文件生成工具 - by 黄方")
         self.setFont(QFont("微软雅黑", 10))
-        self.resize(750, 650)
+        self.resize(1200, 700)
         self.setStyleSheet(self.get_stylesheet())
         self.init_ui()
 
@@ -51,10 +51,12 @@ class BatchFileGenerator(QWidget):
                 font-weight: bold;
             }
             QLineEdit, QComboBox, QSpinBox, QDateEdit {
-                padding: 5px;
+                padding: 6px 8px;
                 border: 1px solid #ced4da;
                 border-radius: 5px;
                 background-color: #ffffff;
+                min-width: 200px;
+                min-height: 32px;
             }
             QPushButton {
                 background-color: #007bff;
@@ -62,7 +64,10 @@ class BatchFileGenerator(QWidget):
                 border: none;
                 border-radius: 5px;
                 padding: 8px 15px;
-                min-width: 80px;
+                min-width: 120px;
+                min-height: 40px;
+                font-size: 10pt;
+                font-weight: bold;
             }
             QPushButton:hover {
                 background-color: #0056b3;
@@ -70,8 +75,8 @@ class BatchFileGenerator(QWidget):
             QGroupBox {
                 border: 1px solid #ced4da;
                 border-radius: 8px;
-                margin-top: 10px;
                 padding: 10px;
+                margin-top: 10px;
             }
             QGroupBox::title {
                 subline-control-position: top center;
@@ -93,17 +98,55 @@ class BatchFileGenerator(QWidget):
 
     def init_ui(self):
         main_layout = QVBoxLayout(self)
+        main_layout.setSpacing(20)
+        main_layout.setContentsMargins(20, 20, 20, 20)
 
         # 标题
         title_label = QLabel("批量文件生成工具")
         title_label.setAlignment(Qt.AlignCenter)
-        title_label.setStyleSheet("font-size: 18pt; font-weight: bold; color: #343a40; margin-bottom: 10px;")
+        title_label.setStyleSheet("font-size: 20pt; font-weight: bold; color: #343a40;")
         main_layout.addWidget(title_label)
 
         # 标签页
-        tab_widget = QTabWidget()
-        main_layout.addWidget(tab_widget)
+        self.tab_widget = QTabWidget()
+        self.init_tabs(self.tab_widget)
+        main_layout.addWidget(self.tab_widget)
 
+        # 主要功能区域
+        top_row = QHBoxLayout()
+        top_row.setSpacing(20)
+
+        # 文件名规则 + 序号设置（包含跳过设置）
+        filename_group = self.create_filename_group()
+        index_group = self.create_index_group()
+        top_row.addWidget(filename_group, stretch=1)
+        top_row.addWidget(index_group, stretch=1)
+
+        # 数据设置 + 日期设置
+        bottom_row = QHBoxLayout()
+        bottom_row.setSpacing(20)
+
+        self.data_group = self.create_data_group()
+        self.date_group = self.create_date_group()
+        bottom_row.addWidget(self.data_group, stretch=1)
+        bottom_row.addWidget(self.date_group, stretch=1)
+
+        # 生成按钮
+        btn_layout = QHBoxLayout()
+        self.btn_generate = QPushButton("生成文件")
+        self.btn_generate.clicked.connect(self.generate_files)
+        btn_layout.addStretch()
+        self.btn_generate.setSizePolicy(QSizePolicy.Preferred, QSizePolicy.Fixed)
+        self.btn_generate.setMinimumHeight(40)
+        btn_layout.addWidget(self.btn_generate)
+        btn_layout.addStretch()
+
+        # 主布局
+        main_layout.addLayout(top_row)
+        main_layout.addLayout(bottom_row)
+        main_layout.addLayout(btn_layout)
+
+    def init_tabs(self, tab_widget):
         # 复制文件页面
         copy_tab = QWidget()
         copy_layout = QVBoxLayout(copy_tab)
@@ -117,133 +160,166 @@ class BatchFileGenerator(QWidget):
         tab_widget.addTab(create_tab, "新建文件")
 
     def init_copy_page(self, layout):
-        # 文件路径设置
-        path_group = QGroupBox("文件路径设置")
+        # 文件路径设置（复制文件页显示）
+        path_group = QGroupBox("文件路径设置（复制文件使用）")
         path_layout = QFormLayout()
-        self.source_path = QLineEdit()
-        self.source_path.setPlaceholderText("请选择源文件（任意格式）")
-        self.btn_select_source = QPushButton("浏览")
-        self.btn_select_source.clicked.connect(self.select_source)
+        path_layout.setSpacing(10)
 
-        self.output_path = QLineEdit()
-        self.output_path.setPlaceholderText("请选择输出目录")
-        self.btn_select_output = QPushButton("浏览")
-        self.btn_select_output.clicked.connect(self.select_output)
+        self.copy_source_path = QLineEdit()
+        self.copy_source_path.setPlaceholderText("请选择源文件（任意格式）")
+        self.btn_copy_select_source = QPushButton("浏览源文件")
+        self.btn_copy_select_source.clicked.connect(self.select_copy_source)
 
-        path_layout.addRow("源文件:", self.btn_select_source)
-        path_layout.addRow(self.source_path)
-        path_layout.addRow("输出目录:", self.btn_select_output)
-        path_layout.addRow(self.output_path)
+        self.copy_output_path = QLineEdit()
+        self.copy_output_path.setPlaceholderText("请选择输出目录")
+        self.btn_copy_select_output = QPushButton("浏览输出目录")
+        self.btn_copy_select_output.clicked.connect(self.select_copy_output)
+
+        path_layout.addRow("源文件:", self.btn_copy_select_source)
+        path_layout.addRow(self.copy_source_path)
+        path_layout.addRow("输出目录:", self.btn_copy_select_output)
+        path_layout.addRow(self.copy_output_path)
         path_group.setLayout(path_layout)
         layout.addWidget(path_group)
 
-        self.init_common_elements(layout)
-
     def init_create_page(self, layout):
-        # 文件类型设置（仅新建）
-        type_group = QGroupBox("文件类型")
-        type_layout = QHBoxLayout()
-        self.file_type = QComboBox()
-        self.file_type.addItems([".docx", ".pptx"])
-        type_layout.addWidget(self.file_type)
-        type_group.setLayout(type_layout)
-        layout.addWidget(type_group)
+        # 文件类型和输出目录设置（新建文件页显示）
+        type_output_group = QGroupBox("文件类型和输出目录")
+        type_output_layout = QFormLayout()
+        type_output_layout.setSpacing(10)
 
-        self.init_common_elements(layout)
+        self.create_file_type = QComboBox()
+        self.create_file_type.addItems([".docx", ".pptx"])
+        self.create_file_type.setMinimumHeight(32)
 
-    def init_common_elements(self, layout):
-        # 文件名规则
-        name_group = QGroupBox("文件名规则")
-        name_layout = QFormLayout()
+        self.create_output_path = QLineEdit()
+        self.create_output_path.setPlaceholderText("请选择输出目录")
+        self.btn_create_select_output = QPushButton("浏览输出目录")
+        self.btn_create_select_output.setMinimumHeight(32)
+        self.btn_create_select_output.clicked.connect(self.select_create_output)
+
+        type_output_layout.addRow("文件类型:", self.create_file_type)
+        type_output_layout.addRow("输出目录:", self.btn_create_select_output)
+        type_output_layout.addRow(self.create_output_path)
+        type_output_group.setLayout(type_output_layout)
+        layout.addWidget(type_output_group)
+
+    def create_filename_group(self):
+        group = QGroupBox("文件名规则")
+        layout = QFormLayout()
+        layout.setSpacing(10)
+
         self.filename_template = QLineEdit("文档_{序号}_{数据}")
-        self.filename_template.setStyleSheet("padding: 5px;")
-        name_layout.addRow("文件名模板:", self.filename_template)
-        name_group.setLayout(name_layout)
-        layout.addWidget(name_group)
+        self.filename_template.setMinimumHeight(32)
 
-        # 序号设置
-        index_group = QGroupBox("序号设置")
-        index_layout = QFormLayout()
+        layout.addRow("文件名模板:", self.filename_template)
+        group.setLayout(layout)
+        return group
+
+    def create_index_group(self):
+        group = QGroupBox("序号设置（含跳过规则）")
+        layout = QFormLayout()
+        layout.setSpacing(10)
+
         self.start_index = QSpinBox()
         self.start_index.setRange(1, 999)
+        self.start_index.setMinimumHeight(32)
+
         self.count = QSpinBox()
         self.count.setRange(1, 1000)
+        self.count.setMinimumHeight(32)
+
         self.number_style = QComboBox()
         self.number_style.addItems(["阿拉伯数字", "汉字小写", "汉字大写", "带圈数字", "罗马数字"])
+        self.number_style.setMinimumHeight(32)
 
         self.skip_numbers = QLineEdit()
         self.skip_numbers.setPlaceholderText("1,3,5 或 1-5")
+        self.skip_numbers.setMinimumHeight(32)
+
         self.skip_multiples = QSpinBox()
         self.skip_multiples.setRange(2, 100)
+        self.skip_multiples.setMinimumHeight(32)
 
-        index_layout.addRow("起始序号:", self.start_index)
-        index_layout.addRow("生成数量:", self.count)
-        index_layout.addRow("序号样式:", self.number_style)
-        index_layout.addRow("跳过数字:", self.skip_numbers)
-        index_layout.addRow("跳过倍数:", self.skip_multiples)
-        index_group.setLayout(index_layout)
-        layout.addWidget(index_group)
+        layout.addRow("起始序号:", self.start_index)
+        layout.addRow("生成数量:", self.count)
+        layout.addRow("序号样式:", self.number_style)
+        layout.addRow("跳过数字:", self.skip_numbers)
+        layout.addRow("跳过倍数:", self.skip_multiples)
+        group.setLayout(layout)
+        return group
 
-        # 数据设置
-        data_group = QGroupBox("数据设置")
-        data_layout = QFormLayout()
+    def create_data_group(self):
+        group = QGroupBox("数据设置")
+        layout = QFormLayout()
+        layout.setSpacing(10)
+
         self.data_source_manual = QRadioButton("手动输入数据")
         self.data_source_excel = QRadioButton("从Excel导入")
         self.data_source_manual.setChecked(True)
+
         self.manual_data = QLineEdit()
         self.manual_data.setPlaceholderText("请输入数据")
+        self.manual_data.setMinimumHeight(32)
 
         self.excel_path = QLineEdit()
         self.excel_path.setPlaceholderText("请选择Excel文件")
-        self.btn_select_excel = QPushButton("浏览")
+        self.excel_path.setMinimumHeight(32)
+
+        self.btn_select_excel = QPushButton("浏览Excel")
+        self.btn_select_excel.setMinimumHeight(32)
         self.btn_select_excel.clicked.connect(self.select_excel)
 
         self.excel_col = QSpinBox()
         self.excel_col.setRange(1, 100)
         self.excel_col.setValue(1)
+        self.excel_col.setMinimumHeight(32)
 
-        data_layout.addRow(self.data_source_manual)
-        data_layout.addRow(self.manual_data)
-        data_layout.addRow(self.data_source_excel)
-        data_layout.addRow("Excel 文件:", self.btn_select_excel)
-        data_layout.addRow(self.excel_path)
-        data_layout.addRow("列号（从1开始）:", self.excel_col)
-        data_group.setLayout(data_layout)
-        layout.addWidget(data_group)
+        layout.addRow(self.data_source_manual)
+        layout.addRow(self.manual_data)
+        layout.addRow(self.data_source_excel)
+        layout.addRow("Excel 文件:", self.btn_select_excel)
+        layout.addRow(self.excel_path)
+        layout.addRow("列号（从1开始）:", self.excel_col)
+        group.setLayout(layout)
+        return group
 
-        # 日期设置
-        date_group = QGroupBox("日期设置")
-        date_layout = QFormLayout()
+    def create_date_group(self):
+        group = QGroupBox("日期设置")
+        layout = QFormLayout()
+        layout.setSpacing(10)
+
         self.use_date = QCheckBox("在文件名中使用日期")
+        self.use_date.setMinimumHeight(32)
+
         self.date_picker = QDateEdit(QDate.currentDate())
         self.date_picker.setCalendarPopup(True)
+        self.date_picker.setMinimumHeight(32)
+
         self.date_format = QComboBox()
         self.date_format.addItems(["yyyy-MM-dd", "yyyy/MM/dd", "dd/MM/yyyy", "MM/dd/yyyy", "yyyyMMdd"])
+        self.date_format.setMinimumHeight(32)
 
-        date_layout.addRow(self.use_date)
-        date_layout.addRow("选择日期:", self.date_picker)
-        date_layout.addRow("日期格式:", self.date_format)
-        date_group.setLayout(date_layout)
-        layout.addWidget(date_group)
+        layout.addRow(self.use_date)
+        layout.addRow("选择日期:", self.date_picker)
+        layout.addRow("日期格式:", self.date_format)
+        group.setLayout(layout)
+        return group
 
-        # 生成按钮
-        btn_layout = QHBoxLayout()
-        self.btn_generate = QPushButton("生成文件")
-        self.btn_generate.clicked.connect(self.generate_files)
-        btn_layout.addStretch()
-        btn_layout.addWidget(self.btn_generate)
-        btn_layout.addStretch()
-        layout.addLayout(btn_layout)
-
-    def select_source(self):
+    def select_copy_source(self):
         path, _ = QFileDialog.getOpenFileName(self, "选择源文件", "", "所有文件 (*.*)")
         if path:
-            self.source_path.setText(path)
+            self.copy_source_path.setText(path)
 
-    def select_output(self):
+    def select_copy_output(self):
         path = QFileDialog.getExistingDirectory(self, "选择输出目录")
         if path:
-            self.output_path.setText(path)
+            self.copy_output_path.setText(path)
+
+    def select_create_output(self):
+        path = QFileDialog.getExistingDirectory(self, "选择输出目录")
+        if path:
+            self.create_output_path.setText(path)
 
     def select_excel(self):
         path, _ = QFileDialog.getOpenFileName(self, "选择Excel文件", "", "Excel 文件 (*.xlsx *.xls)")
@@ -264,26 +340,28 @@ class BatchFileGenerator(QWidget):
         return list(numbers)
 
     def generate_files(self):
-        # 获取当前标签页
-        tab_index = self.parent().parent().currentIndex()
+        tab_index = self.tab_widget.currentIndex()
         mode = "copy" if tab_index == 0 else "create"
 
-        source_path = self.source_path.text() if mode == "copy" else ""
-        output_path = self.output_path.text()
-        file_type = self.file_type.currentText() if mode == "create" else ""
+        # 获取路径和文件类型
+        if mode == "copy":
+            source_path = self.copy_source_path.text()
+            output_path = self.copy_output_path.text()
+            file_type = ""
+        else:
+            source_path = ""
+            output_path = self.create_output_path.text()
+            file_type = self.create_file_type.currentText()
 
         filename_template = self.filename_template.text()
         start = self.start_index.value()
         count = self.count.value()
-
         data_source = "excel" if self.data_source_excel.isChecked() else "manual"
         manual_data = self.manual_data.text()
         excel_path = self.excel_path.text()
         excel_col = self.excel_col.value() - 1  # Excel列从0开始
-
         use_date = self.use_date.isChecked()
         selected_date = self.date_picker.date().toString(self.date_format.currentText())
-
         skip_numbers = self.parse_skip_numbers(self.skip_numbers.text())
         skip_multiples = self.skip_multiples.value()
 
@@ -333,7 +411,6 @@ class BatchFileGenerator(QWidget):
         generated_count = 0
         i = start
         while generated_count < count:
-            # 检查是否跳过当前序号
             if i in skip_numbers or (skip_multiples and i % skip_multiples == 0):
                 i += 1
                 continue
@@ -355,13 +432,12 @@ class BatchFileGenerator(QWidget):
                 full_path += ext
                 shutil.copy2(source_path, full_path)
             elif mode == "create":
-                ext = file_type
-                full_path += ext
-                if ext == ".docx":
+                full_path += file_type
+                if file_type == ".docx":
                     doc = Document()
                     doc.add_heading(current_data, 0)
                     doc.save(full_path)
-                elif ext == ".pptx":
+                elif file_type == ".pptx":
                     prs = Presentation()
                     slide = prs.slides.add_slide(prs.slide_layouts[0])
                     slide.shapes.title.text = current_data
@@ -371,6 +447,26 @@ class BatchFileGenerator(QWidget):
             i += 1
 
         QMessageBox.information(self, "完成", f"已生成 {count} 个文件到 {output_path}")
+
+    def select_copy_source(self):
+        path, _ = QFileDialog.getOpenFileName(self, "选择源文件", "", "所有文件 (*.*)")
+        if path:
+            self.copy_source_path.setText(path)
+
+    def select_copy_output(self):
+        path = QFileDialog.getExistingDirectory(self, "选择输出目录")
+        if path:
+            self.copy_output_path.setText(path)
+
+    def select_create_output(self):
+        path = QFileDialog.getExistingDirectory(self, "选择输出目录")
+        if path:
+            self.create_output_path.setText(path)
+
+    def select_excel(self):
+        path, _ = QFileDialog.getOpenFileName(self, "选择Excel文件", "", "Excel 文件 (*.xlsx *.xls)")
+        if path:
+            self.excel_path.setText(path)
 
 if __name__ == "__main__":
     app = QApplication(sys.argv)
