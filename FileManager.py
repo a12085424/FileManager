@@ -5,10 +5,9 @@ import pandas as pd
 from PyQt5.QtWidgets import (
     QApplication, QWidget, QLabel, QLineEdit, QPushButton, QFileDialog,
     QComboBox, QSpinBox, QRadioButton, QGroupBox, QVBoxLayout, QHBoxLayout,
-    QFormLayout, QMessageBox, QTabWidget, QCheckBox, QDateEdit, QSpacerItem, QSizePolicy
+    QFormLayout, QMessageBox, QTabWidget, QCheckBox, QDateEdit, QSizePolicy
 )
 from PyQt5.QtCore import Qt, QDate
-from PyQt5.QtGui import QFont
 
 # 数字转换函数
 def number_to_style(num, style):
@@ -34,7 +33,6 @@ class BatchFileGenerator(QWidget):
     def __init__(self):
         super().__init__()
         self.setWindowTitle("批量文件生成工具 - by 黄方")
-        self.setFont(QFont("微软雅黑", 10))
         self.resize(1200, 700)
         self.setStyleSheet(self.get_stylesheet())
         self.init_ui()
@@ -55,7 +53,6 @@ class BatchFileGenerator(QWidget):
                 border: 1px solid #ced4da;
                 border-radius: 5px;
                 background-color: #ffffff;
-                min-width: 200px;
                 min-height: 32px;
             }
             QPushButton {
@@ -65,7 +62,7 @@ class BatchFileGenerator(QWidget):
                 border-radius: 5px;
                 padding: 8px 15px;
                 min-width: 120px;
-                min-height: 40px;
+                min-height: 32px;
                 font-size: 10pt;
                 font-weight: bold;
             }
@@ -75,12 +72,14 @@ class BatchFileGenerator(QWidget):
             QGroupBox {
                 border: 1px solid #ced4da;
                 border-radius: 8px;
-                padding: 10px;
-                margin-top: 10px;
+                padding: 20px 10px 10px 10px;
+                margin-top: 20px;
             }
             QGroupBox::title {
-                subline-control-position: top center;
-                color: #495057;
+                subline-control-position: top left;
+                padding: 0px 10px 0px 10px;
+                margin-top: -10px;
+                background-color: #f8f9fa;
                 font-size: 11pt;
                 font-weight: bold;
             }
@@ -116,7 +115,7 @@ class BatchFileGenerator(QWidget):
         top_row = QHBoxLayout()
         top_row.setSpacing(20)
 
-        # 文件名规则 + 序号设置（包含跳过设置）
+        # 文件名规则 + 序号设置
         filename_group = self.create_filename_group()
         index_group = self.create_index_group()
         top_row.addWidget(filename_group, stretch=1)
@@ -134,12 +133,10 @@ class BatchFileGenerator(QWidget):
         # 生成按钮
         btn_layout = QHBoxLayout()
         self.btn_generate = QPushButton("生成文件")
-        self.btn_generate.clicked.connect(self.generate_files)
-        btn_layout.addStretch()
-        self.btn_generate.setSizePolicy(QSizePolicy.Preferred, QSizePolicy.Fixed)
         self.btn_generate.setMinimumHeight(40)
+        self.btn_generate.setSizePolicy(QSizePolicy.Expanding, QSizePolicy.Fixed)
+        self.btn_generate.clicked.connect(self.generate_files)
         btn_layout.addWidget(self.btn_generate)
-        btn_layout.addStretch()
 
         # 主布局
         main_layout.addLayout(top_row)
@@ -161,24 +158,43 @@ class BatchFileGenerator(QWidget):
 
     def init_copy_page(self, layout):
         # 文件路径设置（复制文件页显示）
-        path_group = QGroupBox("文件路径设置（复制文件使用）")
+        path_group = QGroupBox("文件路径设置")
         path_layout = QFormLayout()
         path_layout.setSpacing(10)
+        path_layout.setFieldGrowthPolicy(QFormLayout.AllNonFixedFieldsGrow)
 
         self.copy_source_path = QLineEdit()
         self.copy_source_path.setPlaceholderText("请选择源文件（任意格式）")
+        self.copy_source_path.setMinimumHeight(32)
+        self.copy_source_path.setSizePolicy(QSizePolicy.Expanding, QSizePolicy.Fixed)
+
         self.btn_copy_select_source = QPushButton("浏览源文件")
+        self.btn_copy_select_source.setMinimumWidth(120)
+        self.btn_copy_select_source.setMinimumHeight(32)
+        self.btn_copy_select_source.setSizePolicy(QSizePolicy.Fixed, QSizePolicy.Fixed)
         self.btn_copy_select_source.clicked.connect(self.select_copy_source)
 
         self.copy_output_path = QLineEdit()
         self.copy_output_path.setPlaceholderText("请选择输出目录")
+        self.copy_output_path.setMinimumHeight(32)
+        self.copy_output_path.setSizePolicy(QSizePolicy.Expanding, QSizePolicy.Fixed)
+
         self.btn_copy_select_output = QPushButton("浏览输出目录")
+        self.btn_copy_select_output.setMinimumWidth(120)
+        self.btn_copy_select_output.setMinimumHeight(32)
+        self.btn_copy_select_output.setSizePolicy(QSizePolicy.Fixed, QSizePolicy.Fixed)
         self.btn_copy_select_output.clicked.connect(self.select_copy_output)
 
-        path_layout.addRow("源文件:", self.btn_copy_select_source)
-        path_layout.addRow(self.copy_source_path)
-        path_layout.addRow("输出目录:", self.btn_copy_select_output)
-        path_layout.addRow(self.copy_output_path)
+        source_layout = QHBoxLayout()
+        source_layout.addWidget(self.btn_copy_select_source)
+        source_layout.addWidget(self.copy_source_path, stretch=1)
+
+        output_layout = QHBoxLayout()
+        output_layout.addWidget(self.btn_copy_select_output)
+        output_layout.addWidget(self.copy_output_path, stretch=1)
+
+        path_layout.addRow("源文件:", source_layout)
+        path_layout.addRow("输出目录:", output_layout)
         path_group.setLayout(path_layout)
         layout.addWidget(path_group)
 
@@ -187,20 +203,30 @@ class BatchFileGenerator(QWidget):
         type_output_group = QGroupBox("文件类型和输出目录")
         type_output_layout = QFormLayout()
         type_output_layout.setSpacing(10)
+        type_output_layout.setFieldGrowthPolicy(QFormLayout.AllNonFixedFieldsGrow)
 
         self.create_file_type = QComboBox()
         self.create_file_type.addItems([".docx", ".pptx"])
         self.create_file_type.setMinimumHeight(32)
+        self.create_file_type.setSizePolicy(QSizePolicy.Expanding, QSizePolicy.Fixed)
 
         self.create_output_path = QLineEdit()
         self.create_output_path.setPlaceholderText("请选择输出目录")
+        self.create_output_path.setMinimumHeight(32)
+        self.create_output_path.setSizePolicy(QSizePolicy.Expanding, QSizePolicy.Fixed)
+
         self.btn_create_select_output = QPushButton("浏览输出目录")
+        self.btn_create_select_output.setMinimumWidth(120)
         self.btn_create_select_output.setMinimumHeight(32)
+        self.btn_create_select_output.setSizePolicy(QSizePolicy.Fixed, QSizePolicy.Fixed)
         self.btn_create_select_output.clicked.connect(self.select_create_output)
 
+        output_layout = QHBoxLayout()
+        output_layout.addWidget(self.btn_create_select_output)
+        output_layout.addWidget(self.create_output_path, stretch=1)
+
         type_output_layout.addRow("文件类型:", self.create_file_type)
-        type_output_layout.addRow("输出目录:", self.btn_create_select_output)
-        type_output_layout.addRow(self.create_output_path)
+        type_output_layout.addRow("输出目录:", output_layout)
         type_output_group.setLayout(type_output_layout)
         layout.addWidget(type_output_group)
 
@@ -208,44 +234,70 @@ class BatchFileGenerator(QWidget):
         group = QGroupBox("文件名规则")
         layout = QFormLayout()
         layout.setSpacing(10)
+        layout.setFieldGrowthPolicy(QFormLayout.AllNonFixedFieldsGrow)
 
         self.filename_template = QLineEdit("文档_{序号}_{数据}")
         self.filename_template.setMinimumHeight(32)
+        self.filename_template.setSizePolicy(QSizePolicy.Expanding, QSizePolicy.Fixed)
 
-        layout.addRow("文件名模板:", self.filename_template)
+        filename_layout = QHBoxLayout()
+        filename_layout.addWidget(self.filename_template, stretch=1)
+
+        layout.addRow("文件名模板:", filename_layout)
         group.setLayout(layout)
         return group
 
     def create_index_group(self):
-        group = QGroupBox("序号设置（含跳过规则）")
+        group = QGroupBox("序号设置")
         layout = QFormLayout()
         layout.setSpacing(10)
+        layout.setFieldGrowthPolicy(QFormLayout.AllNonFixedFieldsGrow)
 
         self.start_index = QSpinBox()
         self.start_index.setRange(1, 999)
         self.start_index.setMinimumHeight(32)
+        self.start_index.setSizePolicy(QSizePolicy.Expanding, QSizePolicy.Fixed)
 
         self.count = QSpinBox()
         self.count.setRange(1, 1000)
         self.count.setMinimumHeight(32)
+        self.count.setSizePolicy(QSizePolicy.Expanding, QSizePolicy.Fixed)
 
         self.number_style = QComboBox()
         self.number_style.addItems(["阿拉伯数字", "汉字小写", "汉字大写", "带圈数字", "罗马数字"])
         self.number_style.setMinimumHeight(32)
+        self.number_style.setSizePolicy(QSizePolicy.Expanding, QSizePolicy.Fixed)
 
         self.skip_numbers = QLineEdit()
         self.skip_numbers.setPlaceholderText("1,3,5 或 1-5")
         self.skip_numbers.setMinimumHeight(32)
+        self.skip_numbers.setSizePolicy(QSizePolicy.Expanding, QSizePolicy.Fixed)
 
         self.skip_multiples = QSpinBox()
         self.skip_multiples.setRange(2, 100)
         self.skip_multiples.setMinimumHeight(32)
+        self.skip_multiples.setSizePolicy(QSizePolicy.Expanding, QSizePolicy.Fixed)
 
-        layout.addRow("起始序号:", self.start_index)
-        layout.addRow("生成数量:", self.count)
-        layout.addRow("序号样式:", self.number_style)
-        layout.addRow("跳过数字:", self.skip_numbers)
-        layout.addRow("跳过倍数:", self.skip_multiples)
+        start_index_layout = QHBoxLayout()
+        start_index_layout.addWidget(self.start_index, stretch=1)
+
+        count_layout = QHBoxLayout()
+        count_layout.addWidget(self.count, stretch=1)
+
+        number_style_layout = QHBoxLayout()
+        number_style_layout.addWidget(self.number_style, stretch=1)
+
+        skip_numbers_layout = QHBoxLayout()
+        skip_numbers_layout.addWidget(self.skip_numbers, stretch=1)
+
+        skip_multiples_layout = QHBoxLayout()
+        skip_multiples_layout.addWidget(self.skip_multiples, stretch=1)
+
+        layout.addRow("起始序号:", start_index_layout)
+        layout.addRow("生成数量:", count_layout)
+        layout.addRow("序号样式:", number_style_layout)
+        layout.addRow("跳过数字:", skip_numbers_layout)
+        layout.addRow("跳过倍数:", skip_multiples_layout)
         group.setLayout(layout)
         return group
 
@@ -253,6 +305,7 @@ class BatchFileGenerator(QWidget):
         group = QGroupBox("数据设置")
         layout = QFormLayout()
         layout.setSpacing(10)
+        layout.setFieldGrowthPolicy(QFormLayout.AllNonFixedFieldsGrow)
 
         self.data_source_manual = QRadioButton("手动输入数据")
         self.data_source_excel = QRadioButton("从Excel导入")
@@ -261,25 +314,33 @@ class BatchFileGenerator(QWidget):
         self.manual_data = QLineEdit()
         self.manual_data.setPlaceholderText("请输入数据")
         self.manual_data.setMinimumHeight(32)
+        self.manual_data.setSizePolicy(QSizePolicy.Expanding, QSizePolicy.Fixed)
 
         self.excel_path = QLineEdit()
         self.excel_path.setPlaceholderText("请选择Excel文件")
         self.excel_path.setMinimumHeight(32)
+        self.excel_path.setSizePolicy(QSizePolicy.Expanding, QSizePolicy.Fixed)
 
         self.btn_select_excel = QPushButton("浏览Excel")
+        self.btn_select_excel.setMinimumWidth(120)
         self.btn_select_excel.setMinimumHeight(32)
+        self.btn_select_excel.setSizePolicy(QSizePolicy.Fixed, QSizePolicy.Fixed)
         self.btn_select_excel.clicked.connect(self.select_excel)
 
         self.excel_col = QSpinBox()
         self.excel_col.setRange(1, 100)
         self.excel_col.setValue(1)
         self.excel_col.setMinimumHeight(32)
+        self.excel_col.setSizePolicy(QSizePolicy.Expanding, QSizePolicy.Fixed)
+
+        excel_path_layout = QHBoxLayout()
+        excel_path_layout.addWidget(self.btn_select_excel)
+        excel_path_layout.addWidget(self.excel_path, stretch=1)
 
         layout.addRow(self.data_source_manual)
         layout.addRow(self.manual_data)
         layout.addRow(self.data_source_excel)
-        layout.addRow("Excel 文件:", self.btn_select_excel)
-        layout.addRow(self.excel_path)
+        layout.addRow("Excel 文件:", excel_path_layout)
         layout.addRow("列号（从1开始）:", self.excel_col)
         group.setLayout(layout)
         return group
@@ -288,6 +349,7 @@ class BatchFileGenerator(QWidget):
         group = QGroupBox("日期设置")
         layout = QFormLayout()
         layout.setSpacing(10)
+        layout.setFieldGrowthPolicy(QFormLayout.AllNonFixedFieldsGrow)
 
         self.use_date = QCheckBox("在文件名中使用日期")
         self.use_date.setMinimumHeight(32)
@@ -295,14 +357,22 @@ class BatchFileGenerator(QWidget):
         self.date_picker = QDateEdit(QDate.currentDate())
         self.date_picker.setCalendarPopup(True)
         self.date_picker.setMinimumHeight(32)
+        self.date_picker.setSizePolicy(QSizePolicy.Expanding, QSizePolicy.Fixed)
 
         self.date_format = QComboBox()
         self.date_format.addItems(["yyyy-MM-dd", "yyyy/MM/dd", "dd/MM/yyyy", "MM/dd/yyyy", "yyyyMMdd"])
         self.date_format.setMinimumHeight(32)
+        self.date_format.setSizePolicy(QSizePolicy.Expanding, QSizePolicy.Fixed)
+
+        date_picker_layout = QHBoxLayout()
+        date_picker_layout.addWidget(self.date_picker, stretch=1)
+
+        date_format_layout = QHBoxLayout()
+        date_format_layout.addWidget(self.date_format, stretch=1)
 
         layout.addRow(self.use_date)
-        layout.addRow("选择日期:", self.date_picker)
-        layout.addRow("日期格式:", self.date_format)
+        layout.addRow("选择日期:", date_picker_layout)
+        layout.addRow("日期格式:", date_format_layout)
         group.setLayout(layout)
         return group
 
@@ -356,12 +426,16 @@ class BatchFileGenerator(QWidget):
         filename_template = self.filename_template.text()
         start = self.start_index.value()
         count = self.count.value()
+
+        # 数据源设置
         data_source = "excel" if self.data_source_excel.isChecked() else "manual"
         manual_data = self.manual_data.text()
         excel_path = self.excel_path.text()
         excel_col = self.excel_col.value() - 1  # Excel列从0开始
+
         use_date = self.use_date.isChecked()
         selected_date = self.date_picker.date().toString(self.date_format.currentText())
+
         skip_numbers = self.parse_skip_numbers(self.skip_numbers.text())
         skip_multiples = self.skip_multiples.value()
 
@@ -447,26 +521,6 @@ class BatchFileGenerator(QWidget):
             i += 1
 
         QMessageBox.information(self, "完成", f"已生成 {count} 个文件到 {output_path}")
-
-    def select_copy_source(self):
-        path, _ = QFileDialog.getOpenFileName(self, "选择源文件", "", "所有文件 (*.*)")
-        if path:
-            self.copy_source_path.setText(path)
-
-    def select_copy_output(self):
-        path = QFileDialog.getExistingDirectory(self, "选择输出目录")
-        if path:
-            self.copy_output_path.setText(path)
-
-    def select_create_output(self):
-        path = QFileDialog.getExistingDirectory(self, "选择输出目录")
-        if path:
-            self.create_output_path.setText(path)
-
-    def select_excel(self):
-        path, _ = QFileDialog.getOpenFileName(self, "选择Excel文件", "", "Excel 文件 (*.xlsx *.xls)")
-        if path:
-            self.excel_path.setText(path)
 
 if __name__ == "__main__":
     app = QApplication(sys.argv)
