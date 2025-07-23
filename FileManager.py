@@ -5,13 +5,12 @@ import pandas as pd
 from PyQt5.QtWidgets import (
     QApplication, QWidget, QLabel, QLineEdit, QPushButton, QFileDialog,
     QComboBox, QSpinBox, QRadioButton, QGroupBox, QVBoxLayout, QHBoxLayout,
-    QFormLayout, QMessageBox, QTabWidget, QCheckBox, QDateEdit, QSizePolicy
+    QFormLayout, QMessageBox, QTabWidget, QCheckBox, QDateEdit, QSizePolicy,
+    QSpacerItem
 )
 from PyQt5.QtCore import Qt, QDate
-from docx import Document
-from pptx import Presentation
 
-# 数字转换函数（保持不变）
+# 数字转换函数
 def number_to_style(num, style):
     if style == "Arabic":
         return str(num)
@@ -40,7 +39,6 @@ class BatchFileGenerator(QWidget):
         self.init_ui()
     
     def get_stylesheet(self):
-        # 样式表保持不变
         return """
             QWidget {
                 background-color: #f8f9fa;
@@ -205,6 +203,9 @@ class BatchFileGenerator(QWidget):
         
         path_group.setLayout(path_layout)
         layout.addWidget(path_group)
+        
+        # 添加垂直伸缩项以优化全屏布局
+        layout.addStretch(1)
     
     def init_create_page(self, layout):
         # 文件类型和输出目录设置（新建文件页显示）
@@ -247,6 +248,9 @@ class BatchFileGenerator(QWidget):
         
         type_output_group.setLayout(type_output_layout)
         layout.addWidget(type_output_group)
+        
+        # 添加垂直伸缩项以优化全屏布局
+        layout.addStretch(1)
     
     def create_filename_group(self):
         group = QGroupBox("文件名规则")
@@ -409,18 +413,18 @@ class BatchFileGenerator(QWidget):
         if state == Qt.Checked:
             template = self.filename_template.text()
             if "{数据}" not in template:
-                self.filename_template.setText(template + "_{数据}")
+                self.filename_template.setText(template + "{数据}")
         else:
-            self.filename_template.setText(self.filename_template.text().replace("_{数据}", ""))
+            self.filename_template.setText(self.filename_template.text().replace("{数据}", ""))
     
     def toggle_date_settings(self, state):
         self.date_settings.setEnabled(state == Qt.Checked)
         if state == Qt.Checked:
             template = self.filename_template.text()
             if "{日期}" not in template:
-                self.filename_template.setText(template + "_{日期}")
+                self.filename_template.setText(template + "{日期}")
         else:
-            self.filename_template.setText(self.filename_template.text().replace("_{日期}", ""))
+            self.filename_template.setText(self.filename_template.text().replace("{日期}", ""))
     
     # 保持原有的文件选择方法不变
     def select_copy_source(self):
